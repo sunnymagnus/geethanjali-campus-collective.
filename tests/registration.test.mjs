@@ -1,0 +1,38 @@
+import {test,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {PGlite} from '@electric-sql/pglite';
+import {drizzle} from 'drizzle-orm/pglite';
+import {eq} from 'drizzle-orm';
+import * as schema from '../lib/schema.js';
+import {migrate} from '../lib/db.js';
+import {register,cancel,saveEvent,deleteEvent,participants,listEvents} from '../lib/service.js';
+const client=new PGlite();const db=drizzle(client,{schema});
+await migrate(db);
+const now=new Date();
+for(let i=0;i<4;i++)await db.insert(schema.user).values({id:`test-${i}`,name:`Test ${i}`,email:`student${i}@example.test`,createdAt:now,updatedAt:now});
+const input={title:'Concurrency Test',subtitle:'A single seat for concurrent requests.',description:'Tests that concurrent registrations cannot exceed capacity.',category:'Technology',startsAt:'2030-01-01T09:00:00+05:30',endsAt:'2030-01-01T12:00:00+05:30',venue:'Test lab',capacity:1,organizer:'Test Club',theme:'mint',status:'published'};
+test('last seat is allocated once, duplicate blocked, cancellation frees seat',async()=>{
+ const e=await saveEvent(db,input);const results=await Promise.allSettled([register(db,'test-0',e.id),register(db,'test-1',e.id)]);
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+ const [winner]=await participants(db,e.id);const userId=winner.email==='student0@example.test'?'test-0':'test-1';
+ await assert.rejects(()=>register(db,userId,e.id),/already registered/);
+ await assert.rejects(()=>register(db,'test-2',e.id),/full/);
+ await assert.rejects(()=>deleteEvent(db,e.id),/has registrations/);
+ await assert.rejects(()=>cancel(db,'test-3',e.id),/not found/);
+ await cancel(db,userId,e.id);await register(db,'test-2',e.id);
+ assert.equal((await participants(db,e.id)).length,1);
+});
+test('event validation, capacity changes, drafts and past events',async()=>{
+ await assert.rejects(()=>saveEvent(db,{...input,capacity:0}),/Too small/);
+ await assert.rejects(()=>saveEvent(db,{...input,endsAt:'2029-01-01T12:00:00+05:30'}),/End time/);
+ const e=await saveEvent(db,{...input,capacity:2});await register(db,'test-0',e.id);await register(db,'test-1',e.id);
+ await assert.rejects(()=>saveEvent(db,{...input,capacity:1},e.id),/Capacity cannot/);
+ await assert.rejects(()=>saveEvent(db,{...input,capacity:2,status:'draft'},e.id),/cannot be unpublished/);
+ const draft=await saveEvent(db,{...input,status:'draft'});await assert.rejects(()=>register(db,'test-0',draft.id),/unavailable/);
+ assert.equal((await listEvents(db)).some(x=>x.id===draft.id),false);
+ await deleteEvent(db,draft.id);
+ await db.update(schema.events).set({startsAt:new Date('2020-01-01'),endsAt:new Date('2020-01-02')}).where(eq(schema.events.id,e.id));
+ await assert.rejects(()=>register(db,'test-2',e.id),/closed/);
+ await assert.rejects(()=>cancel(db,'test-0',e.id),/Cancellation closes/);
+});
+after(async()=>{await client.close()});
