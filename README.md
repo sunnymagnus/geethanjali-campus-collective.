@@ -1,35 +1,45 @@
-# Geethanjali Campus Collective — Local Classroom Project
+# Geethanjali Campus Collective â€” Local Classroom Project
 
 Complete frontend, backend, database schema, original event data, and tests. Runs on your computer using Next.js, React, Better Auth, Drizzle, and a persistent local PostgreSQL-compatible PGlite database. No Vercel account or hosted database is required.
 
-## Run in VS Code
+## Run on Windows with Command Prompt
 
-1. Install Node.js 24 LTS and VS Code.
-2. Extract this entire folder and open it using VS Code > File > Open Folder.
-3. Open Terminal > New Terminal and run:
+1. Install Node.js 24 LTS and Git.
+2. Open **Command Prompt** in this project folder and run:
 
-```powershell
+```cmd
 npm ci
 npm run db:setup
-npm run dev
+npm run dev -- --port 3000
 ```
 
-4. Open http://localhost:3000 in your browser. Keep the terminal running. Press Ctrl+C to stop.
+3. Open http://localhost:3000 in your browser. Keep the window running. Press Ctrl+C to stop.
 
-On Windows you can alternatively double-click START-PROJECT.cmd.
-Internet is needed for the first dependency installation; the database and app logic run locally afterward. Google Fonts uses system fallbacks if offline.
+You can also double-click START-PROJECT.cmd. Internet is needed for the first dependency installation; the database and app logic run locally afterward. Google Fonts uses system fallbacks if offline.
 
 ## Demonstrate to your professor
 
 - Browse the nine sample events; use search, categories, list view, bookmarks, and calendar.
 - Create a student account, register, open My registrations, and cancel.
 - Sign out. Sign in as the local demo organizer:
-  - Email: organizer@campus.local
-  - Password: CampusDemo2026!
+  - Email: organiser@gcet.in
+  - Password: 1234567890
 - Select Organizer workspace in the footer to create/edit events and view/export participants.
 - Duplicate reservations and full events are rejected by the backend.
 
 The organizer credentials are for this local classroom demonstration only.
+
+## Update an existing copy
+
+Open Command Prompt in the copied project folder and run:
+
+```cmd
+git pull
+npm ci
+npm run db:setup
+```
+
+Then start the app with `npm run dev -- --port 3000`. If this copy already has an older local database and the new organizer login is not recognized, stop the app and run `rmdir /s /q .data` once, then run `npm run db:setup` again. This clears only that copy's local accounts and registrations; its sample events are recreated automatically.
 
 ## Where the code is
 
@@ -47,13 +57,12 @@ The organizer credentials are for this local classroom demonstration only.
 
 ## Tests and production-style local run
 
-```powershell
+```cmd
 npm test
 npm run build
 npm start
 ```
 
-Stop npm run dev before npm start. Do not run two app instances against the same local database.
-Data persists in .data/campus. Your .env.local secret is generated during setup. The ZIP contains fresh source, without any existing accounts or private settings.
+Stop `npm run dev` before `npm start`. Do not run two app instances against the same local database. Data persists in `.data/campus`. Your `.env.local` secret is generated during setup. Fresh source checkouts do not contain existing accounts or private settings.
 
 This is a web adaptation of the supplied Java Swing/MySQL report, not a Java application. The interface and core functionality match the deployed web version. Sample events are fictional and marked as a student project.
